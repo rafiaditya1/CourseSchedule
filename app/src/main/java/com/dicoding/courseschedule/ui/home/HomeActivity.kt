@@ -7,8 +7,12 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.dicoding.courseschedule.R
 import com.dicoding.courseschedule.data.Course
+import com.dicoding.courseschedule.ui.add.AddCourseActivity
+import com.dicoding.courseschedule.ui.list.ListActivity
 import com.dicoding.courseschedule.ui.setting.SettingsActivity
 import com.dicoding.courseschedule.util.DayName
 import com.dicoding.courseschedule.util.QueryType
@@ -26,17 +30,25 @@ class HomeActivity : AppCompatActivity() {
         setContentView(R.layout.activity_home)
         supportActionBar?.title = resources.getString(R.string.today_schedule)
 
+        val viewModelFactory = HomeViewModelFactory.createFactory(this)
+        viewModel = ViewModelProvider(this, viewModelFactory)[HomeViewModel::class.java]
+
+        viewModel.getNearestSchedule(queryType).observe(this, Observer(this::showTodaySchedule))
     }
 
     private fun showTodaySchedule(course: Course?) {
         checkQueryType(course)
+        val cardHome = findViewById<CardHomeView>(R.id.view_home)
         course?.apply {
             val dayName = DayName.getByNumber(day)
             val time = String.format(getString(R.string.time_format), dayName, startTime, endTime)
             val remainingTime = timeDifference(day, startTime)
 
-            val cardHome = findViewById<CardHomeView>(R.id.view_home)
-
+            cardHome.setCourseName(course.courseName)
+            cardHome.setLecturer(course.lecturer)
+            cardHome.setNote(course.note)
+            cardHome.setRemainingTime(remainingTime)
+            cardHome.setTime(time)
         }
 
         findViewById<TextView>(R.id.tv_empty_home).visibility =
@@ -62,12 +74,19 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val intent: Intent = when (item.itemId) {
-
+            R.id.action_add -> Intent(this, AddCourseActivity::class.java)
+            R.id.action_list -> Intent(this, ListActivity::class.java)
             R.id.action_settings -> Intent(this, SettingsActivity::class.java)
             else -> null
         } ?: return super.onOptionsItemSelected(item)
 
         startActivity(intent)
         return true
+    }
+
+    override fun onRestart() {
+        super.onRestart()
+        finish()
+        startActivity(intent)
     }
 }
